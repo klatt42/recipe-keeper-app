@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "genesis": {
+      "command": "node",
+      "args": [
+        "--loader",
+        "tsx",
+        "agents/genesis-mcp/server.ts"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
