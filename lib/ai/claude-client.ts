@@ -12,7 +12,8 @@ const anthropic = new Anthropic({
 function buildVariationPrompt(
   recipe: Recipe,
   variationType: VariationType,
-  count: number = 3
+  count: number = 3,
+  customParameter?: string
 ): string {
   const basePrompt = `You are a professional chef helping home cooks discover creative variations of their favorite recipes. Analyze the recipe below and suggest ${count} creative, practical variations.
 
@@ -34,7 +35,20 @@ Source: ${recipe.source || 'User created'}
 `
 
   const variationInstructions: Record<VariationType, string> = {
-    dietary: `Generate ${count} DIETARY variations. Consider:
+    dietary: customParameter
+      ? `Generate ${count} DIETARY ADAPTATION variations specifically for: ${customParameter}
+
+IMPORTANT: All ${count} variations MUST be adapted for "${customParameter}" dietary requirement.
+
+Focus on:
+- Proper ingredient substitutions that work for ${customParameter}
+- Maintaining the dish's flavor and texture
+- Practical, accessible alternatives
+- Clear explanations of what was changed and why
+- Ensuring the variations are safe and appropriate for ${customParameter}
+
+Each variation should offer a different approach or style while all meeting the ${customParameter} requirement.`
+      : `Generate ${count} DIETARY variations. Consider:
 - Vegan/vegetarian versions (plant-based substitutes)
 - Gluten-free adaptations (alternative flours, ingredients)
 - Keto/low-carb versions (reduce carbs, increase healthy fats)
@@ -149,10 +163,11 @@ function parseVariationsResponse(response: string): RecipeVariation[] {
 export async function generateRecipeVariations(
   recipe: Recipe,
   variationType: VariationType,
-  count: number = 3
+  count: number = 3,
+  customParameter?: string
 ): Promise<RecipeVariation[]> {
   try {
-    const prompt = buildVariationPrompt(recipe, variationType, count)
+    const prompt = buildVariationPrompt(recipe, variationType, count, customParameter)
 
     const response = await anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',

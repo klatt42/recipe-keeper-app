@@ -46,6 +46,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <div className="mb-2 flex items-start justify-between">
           <h3 className="flex-1 text-lg font-semibold text-gray-900 group-hover:text-blue-600">
             {recipe.title}
+            {recipe.parent_recipe_id && (
+              <span className="ml-2 text-sm font-normal text-amber-600">
+                - A Variation
+              </span>
+            )}
           </h3>
           {recipe.is_favorite && (
             <span className="ml-2 text-yellow-500">

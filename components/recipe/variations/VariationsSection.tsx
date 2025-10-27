@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Sparkles, Crown, Loader2 } from 'lucide-react'
 import { VariationCard } from './VariationCard'
+import { DietaryAdaptationModal } from './DietaryAdaptationModal'
 import {
   generateVariations,
   saveVariationAsRecipe,
@@ -39,20 +40,21 @@ export function VariationsSection({ recipeId, bookId }: VariationsSectionProps) 
     remaining: number
     isPremium: boolean
   } | null>(null)
+  const [isDietaryModalOpen, setIsDietaryModalOpen] = useState(false)
 
   // Check usage limit on mount
   useEffect(() => {
     checkVariationLimit().then(setUsageInfo)
   }, [])
 
-  const handleGenerate = async (type: VariationType) => {
+  const handleGenerate = async (type: VariationType, customParameter?: string) => {
     setIsGenerating(true)
     setError(null)
     setSelectedType(type)
     setVariations([])
 
     try {
-      const result = await generateVariations(recipeId, type, 3)
+      const result = await generateVariations(recipeId, type, 3, customParameter)
 
       if (!result.success || !result.variations) {
         throw new Error(result.error || 'Failed to generate variations')
@@ -68,6 +70,22 @@ export function VariationsSection({ recipeId, bookId }: VariationsSectionProps) 
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleTypeClick = (type: VariationType) => {
+    if (!usageInfo?.canGenerate) return
+
+    // Special handling for dietary adaptations
+    if (type === 'dietary') {
+      setIsDietaryModalOpen(true)
+    } else {
+      handleGenerate(type)
+    }
+  }
+
+  const handleDietarySubmit = (dietaryRequirement: string) => {
+    setIsDietaryModalOpen(false)
+    handleGenerate('dietary', dietaryRequirement)
   }
 
   const handleSave = async (variation: RecipeVariation, index: number) => {
@@ -151,7 +169,7 @@ export function VariationsSection({ recipeId, bookId }: VariationsSectionProps) 
           return (
             <button
               key={type}
-              onClick={() => canGenerate && handleGenerate(type)}
+              onClick={() => canGenerate && handleTypeClick(type)}
               disabled={isGenerating || !canGenerate}
               className={`p-4 rounded-lg border-2 text-left transition-all ${
                 isSelected
@@ -232,6 +250,14 @@ export function VariationsSection({ recipeId, bookId }: VariationsSectionProps) 
           <p>Select a variation type above to get started!</p>
         </div>
       )}
+
+      {/* Dietary Adaptation Modal */}
+      <DietaryAdaptationModal
+        isOpen={isDietaryModalOpen}
+        onClose={() => setIsDietaryModalOpen(false)}
+        onSubmit={handleDietarySubmit}
+        isGenerating={isGenerating}
+      />
     </div>
   )
 }

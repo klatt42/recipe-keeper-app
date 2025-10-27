@@ -75,7 +75,8 @@ export async function checkVariationLimit(): Promise<{
 export async function generateVariations(
   recipeId: string,
   variationType: VariationType,
-  count: number = 3
+  count: number = 3,
+  customParameter?: string
 ): Promise<{
   success: boolean
   variations?: RecipeVariation[]
@@ -114,7 +115,7 @@ export async function generateVariations(
     }
 
     // Generate variations using Claude API
-    const variations = await generateAIVariations(recipe, variationType, count)
+    const variations = await generateAIVariations(recipe, variationType, count, customParameter)
 
     // Track usage
     await trackUsage(user.id, 'ai_variations_generated', count)
