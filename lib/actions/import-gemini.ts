@@ -4,6 +4,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import type { RecipeFormData } from '@/lib/schemas/recipe'
 import { trackAPIUsage } from './usage-tracking'
+import { captureError } from '@/lib/utils/sentry'
+import { recipeImportLimit, checkRateLimit } from '@/lib/ratelimit'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
 
@@ -35,6 +37,15 @@ export async function extractRecipeFromImages(
 
     if (!user) {
       return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check rate limit (10 imports per hour)
+    const rateLimitResult = await checkRateLimit(recipeImportLimit, user.id, 'recipe import')
+    if (!rateLimitResult.success) {
+      return {
+        success: false,
+        error: rateLimitResult.error || 'Rate limit exceeded. Please try again later.'
+      }
     }
 
     const model = genAI.getGenerativeModel({
@@ -153,10 +164,19 @@ If a field cannot be determined from the image, use null for that field.`
       },
     }
   } catch (error: any) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const errorMessage = captureError(error, {
+      userId: user?.id,
+      action: 'extractRecipeFromImages',
+      metadata: { imageCount: images.length }
+    })
+
     console.error('Gemini recipe extraction error:', error)
     return {
       success: false,
-      error: error.message || 'Failed to extract recipe from images',
+      error: errorMessage,
     }
   }
 }
@@ -191,10 +211,14 @@ export async function extractRecipeFromPDFFile(
     // Extract recipe from parsed text
     return extractRecipeFromPDF(pdfData.text)
   } catch (error: any) {
+    const errorMessage = captureError(error, {
+      action: 'extractRecipeFromPDFFile',
+    })
+
     console.error('PDF parsing error:', error)
     return {
       success: false,
-      error: error.message || 'Failed to parse PDF file',
+      error: errorMessage,
     }
   }
 }
@@ -307,10 +331,18 @@ Return ONLY the JSON object.`
       },
     }
   } catch (error: any) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const errorMessage = captureError(error, {
+      userId: user?.id,
+      action: 'extractRecipeFromPDF',
+    })
+
     console.error('Gemini PDF extraction error:', error)
     return {
       success: false,
-      error: error.message || 'Failed to extract recipe from PDF',
+      error: errorMessage,
     }
   }
 }

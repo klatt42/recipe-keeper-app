@@ -13,6 +13,13 @@ export const recipeSchema = z.object({
   image_url: z.string().url().optional().or(z.literal('')),
   rating: z.number().min(1).max(5).optional(),
   is_favorite: z.boolean().default(false),
+  story: z.string().optional(),
+  family_memories: z.array(z.string()).optional(),
+  photo_memories: z.array(z.object({
+    url: z.string().url(),
+    caption: z.string().optional(),
+    year: z.number().optional(),
+  })).optional(),
 })
 
 export const RECIPE_CATEGORIES = [

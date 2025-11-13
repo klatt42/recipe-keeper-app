@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Recipe Keeper - Digitize & Share Your Family Recipes",
+  title: "My Family Recipe Keeper - Digitize & Share Your Family Recipes",
   description: "AI-powered recipe management app for digitizing handwritten recipes, organizing your cookbook, and sharing family recipes with loved ones.",
   keywords: ["recipe manager", "recipe organizer", "family recipes", "recipe OCR", "digital cookbook", "recipe sharing"],
-  authors: [{ name: "Recipe Keeper Team" }],
+  authors: [{ name: "My Family Recipe Keeper Team" }],
   openGraph: {
-    title: "Recipe Keeper - Digitize & Share Your Family Recipes",
+    title: "My Family Recipe Keeper - Digitize & Share Your Family Recipes",
     description: "AI-powered recipe management app for digitizing handwritten recipes, organizing your cookbook, and sharing family recipes with loved ones.",
     type: "website",
   },
@@ -30,11 +32,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="top-center" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -54,7 +54,7 @@ export function PrintRecipeModal({ recipe, images, isOpen, onClose }: PrintRecip
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${recipe.title} - Recipe Keeper</title>
+          <title>${recipe.title} - My Family Recipe Keeper</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {

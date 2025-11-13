@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { uploadRecipeImages, deleteRecipeImage, setRecipePrimaryImage, updateRecipeImage } from '@/lib/actions/recipe-images'
 import { ImageCropper } from './ImageCropper'
 
@@ -23,7 +24,7 @@ export function RecipeImageGallery({ recipeId, images, primaryImageUrl }: Recipe
   const [isUploading, setIsUploading] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [cropImage, setCropImage] = useState<{ imageId: string; imageUrl: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -100,6 +101,37 @@ export function RecipeImageGallery({ recipeId, images, primaryImageUrl }: Recipe
   // Show primary image if no gallery images exist
   const displayImages = images.length > 0 ? images : (primaryImageUrl ? [{ id: 'primary', image_url: primaryImageUrl, display_order: 0 }] : [])
 
+  // Lightbox navigation handlers
+  const handlePreviousImage = () => {
+    if (lightboxIndex !== null && lightboxIndex > 0) {
+      setLightboxIndex(lightboxIndex - 1)
+    }
+  }
+
+  const handleNextImage = () => {
+    if (lightboxIndex !== null && lightboxIndex < displayImages.length - 1) {
+      setLightboxIndex(lightboxIndex + 1)
+    }
+  }
+
+  // Keyboard controls for lightbox
+  useEffect(() => {
+    if (lightboxIndex === null) return
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        handlePreviousImage()
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage()
+      } else if (e.key === 'Escape') {
+        setLightboxIndex(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [lightboxIndex, displayImages.length])
+
   if (displayImages.length === 0 && !showUpload) {
     return (
       <div className="rounded-lg bg-gray-50 p-6 text-center">
@@ -144,7 +176,7 @@ export function RecipeImageGallery({ recipeId, images, primaryImageUrl }: Recipe
                   src={img.image_url}
                   alt={img.caption || `Recipe image ${idx + 1}`}
                   className="h-full w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setLightboxImage(img.image_url)}
+                  onClick={() => setLightboxIndex(idx)}
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 pointer-events-none">
                   <span className="text-xs font-medium text-white">
@@ -262,29 +294,76 @@ export function RecipeImageGallery({ recipeId, images, primaryImageUrl }: Recipe
         These images preserve your original recipe cards, handwritten notes, and personal touches.
       </p>
 
-      {/* Lightbox Modal */}
-      {lightboxImage && (
+      {/* Enhanced Lightbox Modal */}
+      {lightboxIndex !== null && displayImages[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
+          onClick={() => setLightboxIndex(null)}
         >
+          {/* Close Button */}
           <button
-            onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
-            title="Close"
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors z-10"
+            title="Close (ESC)"
           >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-6 w-6" />
           </button>
-          <img
-            src={lightboxImage}
-            alt="Full size recipe image"
-            className="max-h-full max-w-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+
+          {/* Image Counter */}
+          <div className="absolute top-4 left-4 bg-black/50 rounded-full px-4 py-2 text-white text-sm font-medium">
+            {lightboxIndex + 1} / {displayImages.length}
+          </div>
+
+          {/* Previous Button */}
+          {lightboxIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePreviousImage()
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20 transition-colors z-10"
+              title="Previous (←)"
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+          )}
+
+          {/* Next Button */}
+          {lightboxIndex < displayImages.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextImage()
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20 transition-colors z-10"
+              title="Next (→)"
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
+          )}
+
+          {/* Image */}
+          <div className="flex flex-col items-center justify-center max-h-full max-w-full">
+            <img
+              src={displayImages[lightboxIndex].image_url}
+              alt={displayImages[lightboxIndex].caption || `Recipe image ${lightboxIndex + 1}`}
+              className="max-h-[80vh] max-w-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Caption */}
+            {displayImages[lightboxIndex].caption && (
+              <div className="mt-4 bg-black/50 rounded-lg px-6 py-3 max-w-2xl">
+                <p className="text-white text-center text-sm">{displayImages[lightboxIndex].caption}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Instructions */}
           <div className="absolute bottom-4 left-0 right-0 text-center">
-            <p className="text-sm text-white/80">Click anywhere to close</p>
+            <p className="text-sm text-white/60">
+              Use arrow keys to navigate • ESC to close • Click outside to close
+            </p>
           </div>
         </div>
       )}

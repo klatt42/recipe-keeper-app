@@ -261,6 +261,65 @@ export function RecipeForm({ initialData, mode = 'create', additionalImages }: R
         )}
       </div>
 
+      {/* Family Story Section */}
+      <div className="border-t border-gray-200 pt-8">
+        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <span>❤️</span>
+          Family Story & Memories
+          <span className="text-sm font-normal text-gray-500">(Optional)</span>
+        </h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Preserve the story and memories behind this recipe for future generations
+        </p>
+
+        {/* Recipe Story */}
+        <div className="mb-6">
+          <label htmlFor="story" className="block text-sm font-medium text-gray-900">
+            Recipe Story
+          </label>
+          <p className="mt-1 text-sm text-gray-500">
+            Share the story behind this recipe - where it came from, special memories, family history
+          </p>
+          <textarea
+            {...register('story')}
+            id="story"
+            rows={4}
+            className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="This was my grandmother's recipe from her wedding day in 1952. She would make it every Christmas morning..."
+          />
+          {errors.story && (
+            <p className="mt-1 text-sm text-red-600">{errors.story.message}</p>
+          )}
+        </div>
+
+        {/* Family Memories */}
+        <div>
+          <label htmlFor="family_memories_text" className="block text-sm font-medium text-gray-900">
+            Family Memories (Tags)
+          </label>
+          <p className="mt-1 text-sm text-gray-500">
+            Add memory tags separated by commas (e.g., "Christmas tradition, Kids favorite, Sunday dinners")
+          </p>
+          <input
+            type="text"
+            id="family_memories_text"
+            defaultValue={initialData?.family_memories?.join(', ') || ''}
+            onChange={(e) => {
+              const tags = e.target.value
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t.length > 0)
+              setValue('family_memories', tags.length > 0 ? tags : undefined)
+            }}
+            className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Christmas tradition, Kids favorite, Sunday dinners"
+          />
+          {errors.family_memories && (
+            <p className="mt-1 text-sm text-red-600">{errors.family_memories.message}</p>
+          )}
+        </div>
+      </div>
+
       {/* Image Upload */}
       <ImageUpload
         currentImageUrl={initialData?.image_url}

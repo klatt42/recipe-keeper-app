@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { FavoriteButton } from './FavoriteButton'
 import { DeleteButton } from './DeleteButton'
 import { ShareButton } from './ShareButton'
+import { ShareRecipeButton } from '@/components/recipe/ShareRecipeButton'
 import { PrintButton } from './PrintButton'
 import { RecipeImageGallery } from './RecipeImageGallery'
 import { PrintRecipeModal } from './PrintRecipeModal'
@@ -12,16 +13,26 @@ import { CopyRecipeModal } from './CopyRecipeModal'
 import { VariationsSection } from '@/components/recipe/variations/VariationsSection'
 import { NutritionPanel } from '@/components/recipe/nutrition/NutritionPanel'
 import { ServingSizeScaler } from '@/components/recipe/serving/ServingSizeScaler'
+import { ShoppingList } from '@/components/recipe/ShoppingList'
+import { RecipeTimeline } from '@/components/recipe/RecipeTimeline'
+import { QuickCookMode } from '@/components/recipe/QuickCookMode'
+import { RecipeStoryCard } from '@/components/recipe/RecipeStoryCard'
+import { RecipeRating } from '@/components/recipe/RecipeRating'
+import { RecipeComments } from '@/components/recipe/RecipeComments'
 import type { Recipe } from '@/lib/schemas/recipe'
 import type { RecipeImage } from '@/lib/types'
+import type { RecipeComment, RecipeRatingStats } from '@/lib/types/comments'
 
 interface RecipeDetailClientProps {
   recipe: Recipe
   images: RecipeImage[]
   parentRecipe?: { id: string; title: string } | null
+  comments: RecipeComment[]
+  ratingStats: RecipeRatingStats
+  currentUserId?: string
 }
 
-export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetailClientProps) {
+export function RecipeDetailClient({ recipe, images, parentRecipe, comments, ratingStats, currentUserId }: RecipeDetailClientProps) {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
   const [currentServings, setCurrentServings] = useState(parseInt(recipe.servings) || 4)
@@ -37,13 +48,13 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 print:bg-white">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 print:bg-white">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 print:px-0 print:py-0">
           {/* Header */}
           <div className="mb-8 print:hidden">
             <Link
               href="/"
-              className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+              className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
             >
               <svg
                 className="mr-2 h-4 w-4"
@@ -63,10 +74,10 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
           </div>
 
           {/* Recipe Content */}
-          <div className="overflow-hidden rounded-lg bg-white shadow print:shadow-none print:rounded-none">
+          <div className="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow dark:shadow-xl print:shadow-none print:rounded-none">
             {/* Image */}
             {recipe.image_url && (
-              <div className="w-full bg-gray-100 flex items-center justify-center print:max-h-96">
+              <div className="w-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center print:max-h-96">
                 <img
                   src={recipe.image_url}
                   alt={recipe.title}
@@ -79,7 +90,7 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
               {/* Title and Actions */}
               <div className="mb-6 flex items-start justify-between">
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-gray-900">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                     {recipe.title}
                   </h1>
                   {/* Variation Badge */}
@@ -97,12 +108,12 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
                     </div>
                   )}
                   {recipe.category && (
-                    <span className="mt-3 inline-block rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                    <span className="mt-3 inline-block rounded-full bg-blue-100 dark:bg-blue-900 px-3 py-1 text-sm font-medium text-blue-800 dark:text-blue-200">
                       {recipe.category}
                     </span>
                   )}
                   {recipe.source && (
-                    <p className="mt-2 text-sm text-gray-600">
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                       Source: {recipe.source}
                     </p>
                   )}
@@ -128,7 +139,10 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
                     Copy/Move
                   </button>
                   <PrintButton onClick={() => setIsPrintModalOpen(true)} />
-                  <ShareButton recipeId={recipe.id} />
+                  <ShareRecipeButton
+                    recipe={recipe}
+                    recipeUrl={typeof window !== 'undefined' ? window.location.href : ''}
+                  />
                   <Link
                     href={`/recipes/${recipe.id}/edit`}
                     className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -242,6 +256,14 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
                 )}
               </div>
 
+              {/* Recipe Timeline */}
+              <div className="mb-8 print:hidden">
+                <RecipeTimeline
+                  prepTime={recipe.prep_time}
+                  cookTime={recipe.cook_time}
+                />
+              </div>
+
               {/* Serving Size Scaler */}
               <ServingSizeScaler
                 originalServings={originalServings}
@@ -251,41 +273,62 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
 
               {/* Ingredients */}
               <div className="mb-8">
-                <h2 className="mb-4 text-xl font-bold text-gray-900">Ingredients</h2>
-                <div className="rounded-lg bg-gray-50 p-6">
+                <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Ingredients</h2>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-6">
                   <ul className="space-y-2">
                     {scaledIngredients.split('\n').map((ingredient, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="mr-2 mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-600" />
-                        <span className="text-gray-700">{ingredient}</span>
+                        <span className="mr-2 mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" />
+                        <span className="text-gray-700 dark:text-gray-300">{ingredient}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
+
+              {/* Shopping List Mode */}
+              <div className="mb-8 print:hidden">
+                <ShoppingList
+                  recipeId={recipe.id}
+                  recipeTitle={recipe.title}
+                  ingredients={scaledIngredients}
+                  servings={currentServings}
+                />
+              </div>
+
               {/* Instructions */}
               <div className="mb-8">
-                <h2 className="mb-4 text-xl font-bold text-gray-900">Instructions</h2>
-                <div className="prose prose-gray max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-700">
+                <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Instructions</h2>
+                <div className="prose prose-gray dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
                     {recipe.instructions}
                   </div>
                 </div>
               </div>
 
+              {/* Quick Cook Mode */}
+              <div className="mb-8 print:hidden">
+                <QuickCookMode recipe={recipe} />
+              </div>
+
               {/* Notes */}
               {recipe.notes && (
                 <div className="mb-8">
-                  <h2 className="mb-4 text-xl font-bold text-gray-900">Notes</h2>
-                  <div className="rounded-lg bg-yellow-50 p-6">
-                    <p className="whitespace-pre-wrap text-gray-700">{recipe.notes}</p>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Notes</h2>
+                  <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/30 p-6">
+                    <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{recipe.notes}</p>
                   </div>
                 </div>
               )}
 
+              {/* Family Story Card */}
+              <div className="mb-8 print:hidden">
+                <RecipeStoryCard recipe={recipe} />
+              </div>
+
               {/* Recipe Images Gallery */}
               <div className="print:hidden">
-                <h2 className="mb-4 text-xl font-bold text-gray-900">Recipe Images</h2>
+                <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Recipe Images</h2>
                 <RecipeImageGallery
                   recipeId={recipe.id}
                   images={images}
@@ -306,6 +349,20 @@ export function RecipeDetailClient({ recipe, images, parentRecipe }: RecipeDetai
           {/* AI Recipe Variations */}
           <div className="mt-8 print:hidden">
             <VariationsSection recipeId={recipe.id} bookId={recipe.book_id} />
+          </div>
+
+          {/* Recipe Rating */}
+          <div className="mt-8 print:hidden">
+            <RecipeRating recipeId={recipe.id} initialStats={ratingStats} />
+          </div>
+
+          {/* Recipe Comments */}
+          <div className="mt-8 print:hidden">
+            <RecipeComments
+              recipeId={recipe.id}
+              initialComments={comments}
+              currentUserId={currentUserId}
+            />
           </div>
         </div>
       </div>

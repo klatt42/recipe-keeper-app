@@ -358,3 +358,67 @@ export async function copyRecipeToCookbook(recipeId: string, targetBookId: strin
     return { success: true, error: null, recipeId: newRecipe.id }
   }
 }
+
+/**
+ * Get recipes from a specific cookbook (or no cookbook)
+ */
+export async function getRecipesFromCookbook(bookId: string | null) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { recipes: [], error: 'Not authenticated' }
+  }
+
+  let query = supabase
+    .from('recipes')
+    .select('*')
+    .eq('user_id', user.id)
+
+  if (bookId === null) {
+    query = query.is('book_id', null)
+  } else {
+    query = query.eq('book_id', bookId)
+  }
+
+  const { data: recipes, error } = await query.order('title', { ascending: true })
+
+  return { recipes: recipes || [], error: error?.message || null }
+}
+
+/**
+ * Bulk copy recipes to a target cookbook
+ */
+export async function bulkCopyRecipes(recipeIds: string[], targetBookId: string | null) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: 'Not authenticated', count: 0 }
+  }
+
+  let successCount = 0
+  let failedCount = 0
+
+  for (const recipeId of recipeIds) {
+    const result = await copyRecipeToCookbook(recipeId, targetBookId, false)
+    if (result.success) {
+      successCount++
+    } else {
+      failedCount++
+    }
+  }
+
+  revalidatePath('/')
+  return {
+    success: successCount > 0,
+    error: failedCount > 0 ? `${failedCount} recipe(s) failed to copy` : null,
+    count: successCount
+  }
+}

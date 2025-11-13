@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { RecipeBook, BookMember, BookRole } from '@/lib/types/recipe-books'
+import { sendCookbookInvitation } from '@/lib/email/send-cookbook-invitation'
+import { invitationLimit, checkRateLimit } from '@/lib/ratelimit'
 
 /**
  * Get all recipe books accessible to the current user
@@ -248,6 +250,15 @@ export async function inviteToBook(
     return { success: false, error: 'Not authenticated' }
   }
 
+  // Check rate limit (10 invitations per hour)
+  const rateLimitResult = await checkRateLimit(invitationLimit, user.id, 'cookbook invitation')
+  if (!rateLimitResult.success) {
+    return {
+      success: false,
+      error: rateLimitResult.error || 'Rate limit exceeded. Please try again later.'
+    }
+  }
+
   // Verify the current user has permission to invite
   const { data: membership } = await supabase
     .from('book_members')
@@ -274,6 +285,17 @@ export async function inviteToBook(
     return { success: false, error: `No user found with email "${email}". They need to sign up first at /signup.` }
   }
 
+  // Get the book details for the email
+  const { data: book } = await supabase
+    .from('recipe_books')
+    .select('name')
+    .eq('id', bookId)
+    .single()
+
+  if (!book) {
+    return { success: false, error: 'Cookbook not found' }
+  }
+
   // Add them as a member
   const { error } = await supabase
     .from('book_members')
@@ -290,6 +312,15 @@ export async function inviteToBook(
     }
     return { success: false, error: error.message }
   }
+
+  // Send invitation email (don't fail if email fails)
+  await sendCookbookInvitation({
+    toEmail: email,
+    inviterName: user.user_metadata?.full_name || user.email || 'Someone',
+    cookbookId: bookId,
+    cookbookName: book.name,
+    role,
+  })
 
   revalidatePath('/')
   return { success: true, error: null }

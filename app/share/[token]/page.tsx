@@ -23,7 +23,7 @@ export default async function SharePage({ params }: SharePageProps) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Recipe Keeper</h1>
+              <h1 className="text-xl font-bold text-gray-900">My Family Recipe Keeper</h1>
               <span className="ml-3 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
                 Shared Recipe
               </span>

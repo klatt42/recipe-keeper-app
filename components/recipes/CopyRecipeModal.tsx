@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { copyRecipeToCookbook } from '@/lib/actions/recipes'
 import { getRecipeBooks } from '@/lib/actions/recipe-books'
 import type { RecipeBook } from '@/lib/types/recipe-books'
@@ -14,6 +15,7 @@ interface CopyRecipeModalProps {
 }
 
 export function CopyRecipeModal({ recipeId, recipeTitle, currentBookId, isOpen, onClose }: CopyRecipeModalProps) {
+  const router = useRouter()
   const [books, setBooks] = useState<RecipeBook[]>([])
   const [selectedBookId, setSelectedBookId] = useState<string>('')
   const [actionType, setActionType] = useState<'copy' | 'move'>('copy')
@@ -51,8 +53,8 @@ export function CopyRecipeModal({ recipeId, recipeTitle, currentBookId, isOpen, 
 
     if (result.success) {
       onClose()
-      // Reload the page to show the updated state
-      window.location.reload()
+      // Use router.refresh() instead of window.location.reload() to avoid 500 error
+      router.refresh()
     } else {
       setError(result.error || 'Failed to copy/move recipe')
       setIsSubmitting(false)

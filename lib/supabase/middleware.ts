@@ -34,6 +34,52 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Log user activity for authenticated users
+  if (user) {
+    // Only log activity for page views (not API calls or static assets)
+    const isPageView =
+      !request.nextUrl.pathname.startsWith('/api/') &&
+      !request.nextUrl.pathname.startsWith('/_next/') &&
+      !request.nextUrl.pathname.match(/\.(ico|png|jpg|jpeg|gif|svg|webp)$/)
+
+    if (isPageView) {
+      // Determine activity type based on path
+      let activityType = 'page_view'
+      if (request.nextUrl.pathname.startsWith('/recipes/') && request.nextUrl.pathname.length > 10) {
+        activityType = 'recipe_view'
+      }
+
+      // Log activity asynchronously (don't block the response)
+      // Using service role client for the activity log
+      const serviceSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll()
+            },
+            setAll() {
+              // No need to set cookies for service role
+            },
+          },
+        }
+      )
+
+      // Fire and forget - don't await to avoid blocking
+      try {
+        // Don't await to avoid blocking the response
+        serviceSupabase.rpc('log_user_activity', {
+          p_user_id: user.id,
+          p_activity_type: activityType,
+        })
+      } catch (error) {
+        // Silently fail if activity logging fails
+        // This ensures user experience isn't affected
+      }
+    }
+  }
+
   // Protected routes
   if (
     !user &&

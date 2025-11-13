@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { UsageDashboard } from '@/components/usage/UsageDashboard'
+import { isAdmin } from '@/lib/auth/admin'
 
 export const metadata = {
-  title: 'API Usage & Costs | Recipe Keeper',
+  title: 'API Usage & Costs | My Family Recipe Keeper',
   description: 'Monitor your API usage and costs',
 }
 
@@ -17,6 +18,13 @@ export default async function UsagePage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  // Check if user is admin - API usage is admin-only
+  const userIsAdmin = await isAdmin()
+
+  if (!userIsAdmin) {
+    redirect('/')
   }
 
   // Fetch usage data
@@ -45,9 +53,17 @@ export default async function UsagePage() {
               </Link>
             </div>
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Recipe Keeper</h1>
+              <h1 className="text-xl font-bold text-gray-900">My Family Recipe Keeper</h1>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
+              {userIsAdmin && (
+                <Link
+                  href="/admin"
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+                >
+                  🛠️ Admin Dashboard
+                </Link>
+              )}
               <span className="text-sm text-gray-700">{user.email}</span>
             </div>
           </div>

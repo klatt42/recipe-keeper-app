@@ -8,6 +8,8 @@ import {
   type RecipeVariation,
 } from '@/lib/ai/claude-client'
 import { trackUsage } from './usage-tracking'
+import { recipeVariationLimit, checkRateLimit } from '@/lib/ratelimit'
+import { captureError } from '@/lib/utils/sentry'
 
 /**
  * Check if user has reached their free tier limit for AI variations
@@ -93,7 +95,16 @@ export async function generateVariations(
       return { success: false, error: 'Not authenticated' }
     }
 
-    // Check usage limit
+    // Check rate limit first (10 per day - prevents abuse even for premium users)
+    const rateLimitResult = await checkRateLimit(recipeVariationLimit, user.id, 'recipe variation')
+    if (!rateLimitResult.success) {
+      return {
+        success: false,
+        error: rateLimitResult.error || 'Rate limit exceeded. Please try again later.'
+      }
+    }
+
+    // Check usage limit (free tier only)
     const { canGenerate, remaining } = await checkVariationLimit()
     if (!canGenerate) {
       return {
@@ -121,11 +132,20 @@ export async function generateVariations(
     await trackUsage(user.id, 'ai_variations_generated', count)
 
     return { success: true, variations }
-  } catch (error) {
+  } catch (error: any) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const errorMessage = captureError(error, {
+      userId: user?.id,
+      action: 'generateVariations',
+      metadata: { recipeId, variationType, count }
+    })
+
     console.error('Error generating variations:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate variations',
+      error: errorMessage,
     }
   }
 }
@@ -200,11 +220,20 @@ export async function saveVariationAsRecipe(
     revalidatePath(`/recipes/${parentRecipeId}`)
 
     return { success: true, recipeId: newRecipe.id }
-  } catch (error) {
+  } catch (error: any) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const errorMessage = captureError(error, {
+      userId: user?.id,
+      action: 'saveVariationAsRecipe',
+      metadata: { parentRecipeId, variationType }
+    })
+
     console.error('Error saving variation:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save variation',
+      error: errorMessage,
     }
   }
 }

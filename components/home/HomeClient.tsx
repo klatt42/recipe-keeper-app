@@ -7,6 +7,9 @@ import { SearchAndFilter } from '@/components/recipes/SearchAndFilter'
 import { CookbookSelector } from '@/components/cookbooks/CookbookSelector'
 import { CreateCookbookModal } from '@/components/cookbooks/CreateCookbookModal'
 import { ManageCookbookModal } from '@/components/cookbooks/ManageCookbookModal'
+import { ImportRecipesModal } from '@/components/recipes/ImportRecipesModal'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { PromoUsageBanner } from '@/components/promo/PromoUsageBanner'
 import { getRecipeBooks, getRecipeBook } from '@/lib/actions/recipe-books'
 import type { Recipe } from '@/lib/schemas/recipe'
 import type { RecipeBook, BookWithMembers } from '@/lib/types/recipe-books'
@@ -15,16 +18,26 @@ interface HomeClientProps {
   initialRecipes: Recipe[]
   userEmail: string
   userId: string
+  promoResult?: {
+    success: boolean
+    error?: string
+    promo_code?: string
+    promo_name?: string
+    max_recipes?: number
+  } | null
+  isAdmin?: boolean
 }
 
-export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProps) {
+export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isAdmin = false }: HomeClientProps) {
   const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes)
   const [books, setBooks] = useState<RecipeBook[]>([])
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isManageModalOpen, setIsManageModalOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [selectedBook, setSelectedBook] = useState<BookWithMembers | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showPromoNotification, setShowPromoNotification] = useState(!!promoResult)
 
   // Update recipes when initialRecipes changes (from search/filter)
   useEffect(() => {
@@ -74,41 +87,123 @@ export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProp
   const selectedBookData = books.find((b) => b.id === selectedBookId)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 justify-between">
-            <div className="flex">
-              <div className="flex flex-shrink-0 items-center">
-                <h1 className="text-xl font-bold text-gray-900">
-                  Recipe Keeper
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      {/* Eye-catching Food Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxIDEuNzktNCA0LTRzNCAxLjc5IDQgNC0xLjc5IDQtNCA0LTQtMS43OS00LTR6TTIwIDM0YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 border-2 border-white/40">
+                <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl font-black text-white drop-shadow-lg">
+                  🥗 My Family Recipe Keeper
                 </h1>
+                <p className="text-sm text-white/90 font-medium">Your Fresh Digital Cookbook</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                href="/usage"
-                className="text-sm text-gray-700 hover:text-gray-900"
-              >
-                API Usage
-              </Link>
-              <span className="text-sm text-gray-700">
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin"
+                    className="rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white transition-all border-2 border-purple-400/50 hover:border-purple-300/70 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    👑 Admin Dashboard
+                  </Link>
+                  <Link
+                    href="/usage"
+                    className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-white transition-all border border-white/30"
+                  >
+                    📊 API Usage
+                  </Link>
+                </>
+              )}
+              <ThemeToggle />
+              <span className="text-sm font-medium text-white/90">
                 {userEmail}
               </span>
               <form action="/api/auth/signout" method="POST">
                 <button
                   type="submit"
-                  className="rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500"
+                  className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white shadow-lg transition-all border border-white/30 hover:scale-105"
                 >
-                  Sign out
+                  🚪 Sign out
                 </button>
               </form>
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Promo Code Notification */}
+        {showPromoNotification && promoResult && (
+          <div className={`mb-6 rounded-xl p-4 shadow-lg border-2 ${
+            promoResult.success
+              ? 'bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700'
+              : 'bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700'
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <div className={`rounded-full p-2 ${
+                  promoResult.success ? 'bg-green-200 dark:bg-green-800' : 'bg-red-200 dark:bg-red-800'
+                }`}>
+                  {promoResult.success ? (
+                    <svg className="h-6 w-6 text-green-700 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="h-6 w-6 text-red-700 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h3 className={`font-bold text-lg ${
+                    promoResult.success ? 'text-green-900 dark:text-green-200' : 'text-red-900 dark:text-red-200'
+                  }`}>
+                    {promoResult.success ? '🎉 Promo Code Applied!' : '❌ Promo Code Error'}
+                  </h3>
+                  {promoResult.success ? (
+                    <div className={`mt-1 text-sm ${
+                      promoResult.success ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
+                    }`}>
+                      <p className="font-semibold">
+                        {promoResult.promo_name} (<span className="font-mono">{promoResult.promo_code}</span>)
+                      </p>
+                      {promoResult.max_recipes && (
+                        <p className="mt-1">
+                          You now have access to {promoResult.max_recipes === 999999 ? 'unlimited' : promoResult.max_recipes} recipes!
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-red-800 dark:text-red-300">
+                      {promoResult.error || 'Failed to apply promo code'}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPromoNotification(false)}
+                className="rounded-lg p-1 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              >
+                <svg className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Promo Usage Banner */}
+        <PromoUsageBanner />
+
         {/* Cookbook Selector */}
         <div className="mb-6">
           {isLoading ? (
@@ -144,36 +239,49 @@ export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProp
         {/* Header with Add Recipe button */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-4xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent dark:from-green-400 dark:via-emerald-400 dark:to-teal-400">
               {selectedBookId
                 ? selectedBookData?.name || 'Cookbook'
                 : 'All Recipes'}
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              {filteredRecipes.length} {filteredRecipes.length === 1 ? 'recipe' : 'recipes'}
+            <p className="mt-2 text-base font-semibold text-gray-700 dark:text-gray-300">
+              🍽️ {filteredRecipes.length} {filteredRecipes.length === 1 ? 'recipe' : 'recipes'}
               {selectedBookId && selectedBookData?.is_shared && (
-                <span className="ml-2 text-rose-600">
+                <span className="ml-2 text-rose-600 dark:text-rose-400 animate-pulse">
                   ❤️ Family Cookbook
                 </span>
               )}
             </p>
           </div>
           <div className="flex gap-3">
+            {selectedBookId && (
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-purple-600"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  📥 Import from Cookbook
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </button>
+            )}
             <Link
               href="/recipes/import"
-              className="rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-blue-600"
             >
-              <svg className="inline-block mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Import Recipe
+              <span className="relative z-10 flex items-center gap-2">
+                📸 Import Recipe
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </Link>
             <Link
               href="/recipes/new"
-              className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-2xl transition-all hover:scale-110 border-2 border-green-600 animate-pulse hover:animate-none"
             >
-              + Add Recipe
+              <span className="relative z-10 flex items-center gap-2">
+                ✨ Add Recipe
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </Link>
           </div>
         </div>
@@ -183,9 +291,9 @@ export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProp
 
         {/* Recipes Grid */}
         {filteredRecipes.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
+          <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-12 text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -197,15 +305,15 @@ export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProp
                 d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
               />
             </svg>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
+            <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
               {selectedBookId ? 'No recipes in this cookbook yet' : 'No recipes yet'}
             </h3>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Get started by creating your first recipe.
             </p>
             <Link
               href="/recipes/new"
-              className="mt-6 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+              className="mt-6 inline-flex items-center rounded-md bg-blue-600 dark:bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 dark:hover:bg-blue-600"
             >
               + Add Your First Recipe
             </Link>
@@ -231,6 +339,13 @@ export function HomeClient({ initialRecipes, userEmail, userId }: HomeClientProp
         onClose={() => setIsManageModalOpen(false)}
         book={selectedBook}
         currentUserId={userId}
+      />
+
+      <ImportRecipesModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        targetBookId={selectedBookId}
+        targetBookName={selectedBookData?.name || 'Cookbook'}
       />
     </div>
   )
