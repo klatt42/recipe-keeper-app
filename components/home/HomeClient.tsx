@@ -9,6 +9,8 @@ import { CreateCookbookModal } from '@/components/cookbooks/CreateCookbookModal'
 import { ManageCookbookModal } from '@/components/cookbooks/ManageCookbookModal'
 import { ImportRecipesModal } from '@/components/recipes/ImportRecipesModal'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { TooltipToggle } from '@/components/ui/TooltipToggle'
+import { ButtonTooltip } from '@/components/ui/Tooltip'
 import { PromoUsageBanner } from '@/components/promo/PromoUsageBanner'
 import { getRecipeBooks, getRecipeBook } from '@/lib/actions/recipe-books'
 import type { Recipe } from '@/lib/schemas/recipe'
@@ -109,32 +111,39 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
             <div className="flex items-center gap-4">
               {isAdmin && (
                 <>
-                  <Link
-                    href="/admin"
-                    className="rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white transition-all border-2 border-purple-400/50 hover:border-purple-300/70 shadow-lg hover:shadow-xl hover:scale-105"
-                  >
-                    👑 Admin Dashboard
-                  </Link>
-                  <Link
-                    href="/usage"
-                    className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-white transition-all border border-white/30"
-                  >
-                    📊 API Usage
-                  </Link>
+                  <ButtonTooltip content="View business metrics, manage users and promo codes">
+                    <Link
+                      href="/admin"
+                      className="rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white transition-all border-2 border-purple-400/50 hover:border-purple-300/70 shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                      👑 Admin Dashboard
+                    </Link>
+                  </ButtonTooltip>
+                  <ButtonTooltip content="Monitor API usage costs and track spending">
+                    <Link
+                      href="/usage"
+                      className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-white transition-all border border-white/30"
+                    >
+                      📊 API Usage
+                    </Link>
+                  </ButtonTooltip>
                 </>
               )}
+              <TooltipToggle />
               <ThemeToggle />
               <span className="text-sm font-medium text-white/90">
                 {userEmail}
               </span>
-              <form action="/api/auth/signout" method="POST">
-                <button
-                  type="submit"
-                  className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white shadow-lg transition-all border border-white/30 hover:scale-105"
-                >
-                  🚪 Sign out
-                </button>
-              </form>
+              <ButtonTooltip content="Sign out of your account">
+                <form action="/api/auth/signout" method="POST">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white shadow-lg transition-all border border-white/30 hover:scale-105"
+                  >
+                    🚪 Sign out
+                  </button>
+                </form>
+              </ButtonTooltip>
             </div>
           </div>
         </div>
@@ -255,34 +264,40 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
           </div>
           <div className="flex gap-3">
             {selectedBookId && (
-              <button
-                onClick={() => setIsImportModalOpen(true)}
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-purple-600"
+              <ButtonTooltip content="Copy recipes from another cookbook into this one">
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-purple-600"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    📥 Import from Cookbook
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+              </ButtonTooltip>
+            )}
+            <ButtonTooltip content="Scan a recipe card or photo with AI-powered OCR">
+              <Link
+                href="/recipes/import"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-blue-600"
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  📥 Import from Cookbook
+                  📸 Import Recipe
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </button>
-            )}
-            <Link
-              href="/recipes/import"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-blue-600"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                📸 Import Recipe
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            </Link>
-            <Link
-              href="/recipes/new"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-2xl transition-all hover:scale-110 border-2 border-green-600 animate-pulse hover:animate-none"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                ✨ Add Recipe
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            </Link>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </Link>
+            </ButtonTooltip>
+            <ButtonTooltip content="Create a new recipe by typing it out manually">
+              <Link
+                href="/recipes/new"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:shadow-2xl transition-all hover:scale-110 border-2 border-green-600 animate-pulse hover:animate-none"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  ✨ Add Recipe
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </Link>
+            </ButtonTooltip>
           </div>
         </div>
 

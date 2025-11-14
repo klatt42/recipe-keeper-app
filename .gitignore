@@ -43,3 +43,6 @@ next-env.d.ts
 # Sentry
 .sentryclirc
 sentry.properties
+
+# Local Netlify folder
+.netlify
