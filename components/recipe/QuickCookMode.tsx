@@ -122,10 +122,12 @@ export function QuickCookMode({ recipe }: QuickCookModeProps) {
       </div>
 
       {/* Current Step */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 md:p-12 overflow-y-auto">
-        <div className="max-w-4xl w-full">
-          <div className="text-white text-3xl sm:text-4xl md:text-5xl leading-relaxed text-center font-medium">
-            {steps[currentStep]}
+      <div className="flex-1 overflow-y-auto">
+        <div className="min-h-full flex items-start justify-center p-6 sm:p-8 md:p-12 pt-8 sm:pt-12 md:pt-16">
+          <div className="max-w-4xl w-full">
+            <div className="text-white text-3xl sm:text-4xl md:text-5xl leading-relaxed text-center font-medium">
+              {steps[currentStep]}
+            </div>
           </div>
         </div>
       </div>
