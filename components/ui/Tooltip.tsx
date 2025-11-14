@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect, cloneElement, isValidElement } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTooltips } from '@/lib/contexts/TooltipContext'
 
 interface TooltipProps {
   content: string
-  children: React.ReactElement
+  children: React.ReactNode
   position?: 'top' | 'bottom' | 'left' | 'right'
   delay?: number
 }
@@ -19,9 +19,9 @@ export function Tooltip({
   const { enabled } = useTooltips()
   const [isVisible, setIsVisible] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0 })
-  const [triggerElement, setTriggerElement] = useState<HTMLElement | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const timeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     return () => {
@@ -31,15 +31,12 @@ export function Tooltip({
     }
   }, [])
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
+  const handleMouseEnter = () => {
     if (!enabled) return
 
-    const target = e.currentTarget as HTMLElement
-    setTriggerElement(target)
-
     timeoutRef.current = setTimeout(() => {
-      if (target && tooltipRef.current) {
-        const triggerRect = target.getBoundingClientRect()
+      if (wrapperRef.current && tooltipRef.current) {
+        const triggerRect = wrapperRef.current.getBoundingClientRect()
         const tooltipRect = tooltipRef.current.getBoundingClientRect()
 
         let x = 0
@@ -80,38 +77,22 @@ export function Tooltip({
       clearTimeout(timeoutRef.current)
     }
     setIsVisible(false)
-    setTriggerElement(null)
   }
 
   if (!enabled) {
-    return children
+    return <>{children}</>
   }
-
-  // Clone child and add event handlers
-  if (!isValidElement(children)) {
-    return children
-  }
-
-  const enhancedChild = cloneElement(children, {
-    onMouseEnter: (e: React.MouseEvent) => {
-      handleMouseEnter(e)
-      // Call original onMouseEnter if it exists
-      if (children.props.onMouseEnter) {
-        children.props.onMouseEnter(e)
-      }
-    },
-    onMouseLeave: (e: React.MouseEvent) => {
-      handleMouseLeave()
-      // Call original onMouseLeave if it exists
-      if (children.props.onMouseLeave) {
-        children.props.onMouseLeave(e)
-      }
-    },
-  } as any)
 
   return (
     <>
-      {enhancedChild}
+      <div
+        ref={wrapperRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="inline-flex"
+      >
+        {children}
+      </div>
 
       {isVisible && (
         <div
@@ -179,7 +160,7 @@ export function ButtonTooltip({
   children,
 }: {
   content: string
-  children: React.ReactElement
+  children: React.ReactNode
 }) {
   return (
     <Tooltip content={content} position="bottom" delay={300}>
