@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
@@ -16,7 +16,8 @@ interface Subscription {
   stripe_customer_id: string | null
 }
 
-export default function BillingPage() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function BillingContent() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -33,13 +34,12 @@ export default function BillingPage() {
 
     if (success === 'true') {
       toast.success('Subscription activated! Welcome to Premium.')
-      // Clear query params
       router.replace('/billing')
     } else if (canceled === 'true') {
       toast.info('Checkout canceled. Your subscription was not changed.')
       router.replace('/billing')
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const loadSubscription = async () => {
     try {
@@ -89,13 +89,12 @@ export default function BillingPage() {
         throw new Error(data.error || 'Failed to create checkout session')
       }
 
-      // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upgrade error:', error)
-      toast.error(error.message || 'Failed to start checkout')
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout')
       setActionLoading(false)
     }
   }
@@ -109,7 +108,6 @@ export default function BillingPage() {
     setActionLoading(true)
 
     try {
-      // Create billing portal session
       const response = await fetch('/api/billing-portal', {
         method: 'POST',
         headers: {
@@ -123,13 +121,12 @@ export default function BillingPage() {
         throw new Error(data.error || 'Failed to create portal session')
       }
 
-      // Redirect to Stripe Customer Portal
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Portal error:', error)
-      toast.error(error.message || 'Failed to open billing portal')
+      toast.error(error instanceof Error ? error.message : 'Failed to open billing portal')
       setActionLoading(false)
     }
   }
@@ -151,7 +148,6 @@ export default function BillingPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
         <div className="mb-6">
           <button
             onClick={() => router.push('/')}
@@ -164,13 +160,11 @@ export default function BillingPage() {
           </button>
         </div>
 
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Subscription & Billing</h1>
           <p className="mt-2 text-gray-600">Manage your Recipe Keeper subscription</p>
         </div>
 
-        {/* Current Plan Status */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Current Plan</h2>
@@ -229,11 +223,8 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {/* Actions */}
         {isFree ? (
-          // Show upgrade options for free users
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Monthly Plan */}
             <div className="bg-white rounded-lg shadow-md p-6 border-2 border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Monthly</h3>
               <div className="text-3xl font-bold text-gray-900 mb-4">
@@ -274,7 +265,6 @@ export default function BillingPage() {
               </button>
             </div>
 
-            {/* Annual Plan */}
             <div className="bg-white rounded-lg shadow-md p-6 border-4 border-emerald-500 relative">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white text-sm font-bold px-4 py-1 rounded-full">
                 SAVE 17%
@@ -314,7 +304,6 @@ export default function BillingPage() {
             </div>
           </div>
         ) : (
-          // Show manage subscription for premium users
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Subscription</h3>
             <p className="text-gray-600 mb-6">
@@ -331,5 +320,21 @@ export default function BillingPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function BillingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <BillingContent />
+    </Suspense>
   )
 }
