@@ -16,7 +16,7 @@ interface Subscription {
   stripe_customer_id: string | null
 }
 
-// Component that uses useSearchParams - must be wrapped in Suspense
+// Component that uses useSearchParams - must be wrapped in Suspense boundary
 function BillingContent() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
