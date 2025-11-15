@@ -4,13 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ token: string }> }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const params = await context.params
-    const { token } = params
+    // Extract token from URL pathname as workaround for Next.js 15 params issue
+    const pathname = request.nextUrl.pathname
+    const token = pathname.split('/').pop() || ''
+
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No invitation token provided' }, { status: 400 })
+    }
 
     const supabase = await createClient()
 
