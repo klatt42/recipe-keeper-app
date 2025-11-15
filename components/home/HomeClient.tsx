@@ -52,11 +52,20 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
 
   const loadBooks = async () => {
     setIsLoading(true)
-    const result = await getRecipeBooks()
-    if (result.books) {
-      setBooks(result.books)
+    try {
+      const result = await getRecipeBooks()
+      console.log('Cookbooks loaded:', result)
+      if (result.books) {
+        setBooks(result.books)
+      }
+      if (result.error) {
+        console.error('Error loading cookbooks:', result.error)
+      }
+    } catch (error) {
+      console.error('Failed to load cookbooks:', error)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const handleSelectBook = (bookId: string | null) => {
