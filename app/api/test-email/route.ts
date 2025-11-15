@@ -7,18 +7,42 @@ export async function GET() {
     const emailEnabled = isEmailEnabled()
     const apiKey = process.env.RESEND_API_KEY
 
-    // Don't send actual email in test, just check config
+    if (!emailEnabled) {
+      return NextResponse.json({
+        error: 'Email not enabled',
+        emailEnabled: false,
+        hasApiKey: !!apiKey,
+        emailFrom: EMAIL_FROM,
+      }, { status: 500 })
+    }
+
+    // Try to send a simple test email
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: 'h15629526027@gmail.com', // Send to your email
+      subject: 'Recipe Keeper - Test Email',
+      html: '<p>This is a test email from Recipe Keeper. If you receive this, email is working!</p>',
+    })
+
+    if (error) {
+      console.error('Resend error:', error)
+      return NextResponse.json({
+        success: false,
+        error: error.message || 'Failed to send email',
+        resendError: error,
+      }, { status: 500 })
+    }
+
+    console.log('Test email sent successfully:', data)
     return NextResponse.json({
-      emailEnabled,
-      hasApiKey: !!apiKey,
-      apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'none',
-      emailFrom: EMAIL_FROM,
-      env: {
-        RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-        EMAIL_FROM: process.env.EMAIL_FROM || 'not set',
-      }
+      success: true,
+      message: 'Test email sent!',
+      emailId: data?.id,
+      sentTo: 'h15629526027@gmail.com',
+      from: EMAIL_FROM,
     })
   } catch (error) {
+    console.error('Test email error:', error)
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
