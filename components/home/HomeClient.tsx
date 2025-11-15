@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { RecipeCard } from '@/components/recipes/RecipeCard'
 import { SearchAndFilter } from '@/components/recipes/SearchAndFilter'
@@ -39,23 +39,23 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
   const [selectedBook, setSelectedBook] = useState<BookWithMembers | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showPromoNotification, setShowPromoNotification] = useState(!!promoResult)
+  const hasLoadedBooks = useRef(false)
 
   // Update recipes when initialRecipes changes (from search/filter)
   useEffect(() => {
     setRecipes(initialRecipes)
   }, [initialRecipes])
 
-  // Load cookbooks on mount
-  useEffect(() => {
-    loadBooks()
-  }, [])
-
-  const loadBooks = async () => {
+  // Load cookbooks function
+  const loadBooks = useCallback(async () => {
+    console.log('loadBooks function called')
     setIsLoading(true)
     try {
+      console.log('Calling getRecipeBooks...')
       const result = await getRecipeBooks()
       console.log('Cookbooks loaded:', result)
       if (result.books) {
+        console.log('Setting books state:', result.books.length, 'books')
         setBooks(result.books)
       }
       if (result.error) {
@@ -64,9 +64,22 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     } catch (error) {
       console.error('Failed to load cookbooks:', error)
     } finally {
+      console.log('loadBooks completed, setting isLoading to false')
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  // Load cookbooks on mount (only once)
+  useEffect(() => {
+    if (hasLoadedBooks.current) {
+      console.log('Books already loaded, skipping')
+      return
+    }
+
+    console.log('HomeClient mounted, loading cookbooks...')
+    hasLoadedBooks.current = true
+    loadBooks()
+  }, [loadBooks])
 
   const handleSelectBook = (bookId: string | null) => {
     setSelectedBookId(bookId)

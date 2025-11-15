@@ -11,74 +11,95 @@ import { invitationLimit, checkRateLimit } from '@/lib/ratelimit'
  * Get all recipe books accessible to the current user
  */
 export async function getRecipeBooks() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    return { books: [], error: 'Not authenticated' }
-  }
-
-  // Get books owned by user
-  const { data: ownedBooks, error: ownedError } = await supabase
-    .from('recipe_books')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-
-  if (ownedError) {
-    return { books: [], error: ownedError.message }
-  }
-
-  // Get books where user is a member
-  const { data: memberBooks, error: memberError } = await supabase
-    .from('book_members')
-    .select('book_id, role, recipe_books(*)')
-    .eq('user_id', user.id)
-
-  if (memberError) {
-    return { books: [], error: memberError.message }
-  }
-
-  // Combine and deduplicate
-  const allBooks = [...(ownedBooks || [])]
-  const ownedBookIds = new Set(ownedBooks?.map(b => b.id) || [])
-
-  memberBooks?.forEach(mb => {
-    if (mb.recipe_books && !ownedBookIds.has(mb.book_id)) {
-      allBooks.push({
-        ...mb.recipe_books,
-        user_role: mb.role
-      })
+    if (!user) {
+      console.log('[getRecipeBooks] Not authenticated')
+      return { books: [], error: 'Not authenticated' }
     }
-  })
 
-  // Add counts for each book
-  const booksWithCounts = await Promise.all(
-    allBooks.map(async (book) => {
-      // Count members
-      const { count: memberCount } = await supabase
-        .from('book_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('book_id', book.id)
+    console.log('[getRecipeBooks] User authenticated:', user.id)
 
-      // Count recipes
-      const { count: recipeCount } = await supabase
-        .from('recipes')
-        .select('*', { count: 'exact', head: true })
-        .eq('book_id', book.id)
+    // Get books owned by user
+    const { data: ownedBooks, error: ownedError } = await supabase
+      .from('recipe_books')
+      .select('*')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: true })
 
-      return {
-        ...book,
-        member_count: memberCount || 0,
-        recipe_count: recipeCount || 0,
-        user_role: book.owner_id === user.id ? 'owner' : book.user_role
+    console.log('[getRecipeBooks] Owned books:', ownedBooks?.length || 0, 'Error:', ownedError)
+
+    if (ownedError) {
+      return { books: [], error: ownedError.message }
+    }
+
+    // Get books where user is a member
+    const { data: memberBooks, error: memberError } = await supabase
+      .from('book_members')
+      .select('book_id, role, recipe_books(*)')
+      .eq('user_id', user.id)
+
+    console.log('[getRecipeBooks] Member books:', memberBooks?.length || 0, 'Error:', memberError)
+
+    if (memberError) {
+      return { books: [], error: memberError.message }
+    }
+
+    // Combine and deduplicate
+    const allBooks = [...(ownedBooks || [])]
+    const ownedBookIds = new Set(ownedBooks?.map(b => b.id) || [])
+
+    memberBooks?.forEach(mb => {
+      if (mb.recipe_books && !ownedBookIds.has(mb.book_id)) {
+        allBooks.push({
+          ...mb.recipe_books,
+          user_role: mb.role
+        })
       }
     })
-  )
 
-  return { books: booksWithCounts as RecipeBook[], error: null }
+    console.log('[getRecipeBooks] Total books before counts:', allBooks.length)
+
+    // If no books, return early
+    if (allBooks.length === 0) {
+      console.log('[getRecipeBooks] No books found, returning empty array')
+      return { books: [], error: null }
+    }
+
+    // Add counts for each book
+    const booksWithCounts = await Promise.all(
+      allBooks.map(async (book) => {
+        // Count members
+        const { count: memberCount } = await supabase
+          .from('book_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('book_id', book.id)
+
+        // Count recipes
+        const { count: recipeCount } = await supabase
+          .from('recipes')
+          .select('*', { count: 'exact', head: true })
+          .eq('book_id', book.id)
+
+        return {
+          ...book,
+          member_count: memberCount || 0,
+          recipe_count: recipeCount || 0,
+          user_role: book.owner_id === user.id ? 'owner' : book.user_role
+        }
+      })
+    )
+
+    console.log('[getRecipeBooks] Returning books with counts:', booksWithCounts.length)
+    return { books: booksWithCounts as RecipeBook[], error: null }
+  } catch (error) {
+    console.error('[getRecipeBooks] Unexpected error:', error)
+    return { books: [], error: error instanceof Error ? error.message : 'Unknown error' }
+  }
 }
 
 /**
