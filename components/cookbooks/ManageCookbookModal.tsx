@@ -35,16 +35,27 @@ export function ManageCookbookModal({
     setError(null)
     setSuccess(null)
 
-    const result = await inviteToBook(book.id, inviteEmail, inviteRole)
+    try {
+      const response = await fetch(`/api/cookbooks/${book.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      })
 
-    if (result.success) {
-      setSuccess(`Invitation sent to ${inviteEmail}!`)
-      setInviteEmail('')
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
-    } else {
-      setError(result.error || 'Failed to send invitation')
+      const result = await response.json()
+
+      if (result.success) {
+        setSuccess(`Invitation sent to ${inviteEmail}!`)
+        setInviteEmail('')
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      } else {
+        setError(result.error || 'Failed to send invitation')
+      }
+    } catch (error) {
+      console.error('Invitation error:', error)
+      setError('Failed to send invitation. Please try again.')
     }
 
     setIsInviting(false)

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 
@@ -14,8 +14,44 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [invitationToken, setInvitationToken] = useState<string | null>(null)
+  const [invitationDetails, setInvitationDetails] = useState<{
+    email: string
+    cookbookName: string
+    role: string
+  } | null>(null)
+  const [loadingInvitation, setLoadingInvitation] = useState(false)
+
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Load invitation details if token is present
+  useEffect(() => {
+    const token = searchParams.get('invitation')
+    if (token) {
+      setInvitationToken(token)
+      setLoadingInvitation(true)
+
+      fetch(`/api/invitations/${token}`)
+        .then(async (response) => {
+          const result = await response.json()
+          if (result.success && result.invitation) {
+            setInvitationDetails(result.invitation)
+            setEmail(result.invitation.email)
+          } else {
+            setError(result.error || 'Invalid invitation')
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load invitation:', err)
+          setError('Failed to load invitation details')
+        })
+        .finally(() => {
+          setLoadingInvitation(false)
+        })
+    }
+  }, [searchParams])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +71,13 @@ export default function SignupPage() {
     }
 
     try {
+      // Verify email matches invitation if present
+      if (invitationDetails && email !== invitationDetails.email) {
+        setError(`This invitation is for ${invitationDetails.email}. Please use that email address.`)
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -45,6 +88,27 @@ export default function SignupPage() {
       })
 
       if (error) throw error
+
+      // If there's an invitation token, accept it after signup
+      if (invitationToken && data.user) {
+        try {
+          const acceptResponse = await fetch('/api/invitations/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invitationToken }),
+          })
+
+          const acceptResult = await acceptResponse.json()
+
+          if (!acceptResult.success) {
+            console.error('Failed to accept invitation:', acceptResult.error)
+            // Don't fail signup if invitation acceptance fails
+          }
+        } catch (inviteError) {
+          console.error('Error accepting invitation:', inviteError)
+          // Don't fail signup if invitation acceptance fails
+        }
+      }
 
       setSuccess(true)
     } catch (error: any) {
@@ -66,6 +130,13 @@ export default function SignupPage() {
             <p className="mt-4 text-sm text-green-600">
               Click the link in the email to complete your registration.
             </p>
+            {invitationDetails && (
+              <div className="mt-4 rounded-md bg-blue-50 p-3">
+                <p className="text-sm text-blue-800">
+                  After confirming your email, you'll have access to <strong>{invitationDetails.cookbookName}</strong>!
+                </p>
+              </div>
+            )}
             {promoCode && (
               <div className="mt-4 rounded-md bg-blue-50 p-3">
                 <p className="text-sm text-blue-800">
@@ -105,6 +176,37 @@ export default function SignupPage() {
           </p>
         </div>
 
+        {loadingInvitation && (
+          <div className="rounded-lg bg-blue-50 p-4 text-center">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
+            <p className="mt-2 text-sm text-blue-700">Loading invitation details...</p>
+          </div>
+        )}
+
+        {invitationDetails && (
+          <div className="rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white flex-shrink-0">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">You've been invited!</h3>
+                <p className="text-sm text-gray-700 mt-1">
+                  You're invited to join <strong>{invitationDetails.cookbookName}</strong> as a{' '}
+                  <span className="capitalize">{invitationDetails.role}</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleSignup}>
           <div className="space-y-4 rounded-md shadow-sm">
             <div>
@@ -119,7 +221,8 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                disabled={!!invitationDetails}
+                className="relative block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Email address"
               />
             </div>
