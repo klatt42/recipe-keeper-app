@@ -19,7 +19,7 @@ export async function GET() {
     // Try to send a simple test email
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
-      to: 'h15629526027@gmail.com', // Send to your email
+      to: 'ppsc.rok@gmail.com', // Send to Resend registered email
       subject: 'Recipe Keeper - Test Email',
       html: '<p>This is a test email from Recipe Keeper. If you receive this, email is working!</p>',
     })
