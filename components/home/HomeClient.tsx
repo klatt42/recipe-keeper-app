@@ -52,7 +52,17 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     setIsLoading(true)
     try {
       console.log('Calling getRecipeBooks...')
-      const result = await getRecipeBooks()
+
+      // Add timeout to detect hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout after 5 seconds')), 5000)
+      )
+
+      const result = await Promise.race([
+        getRecipeBooks(),
+        timeoutPromise
+      ]) as Awaited<ReturnType<typeof getRecipeBooks>>
+
       console.log('Cookbooks loaded:', result)
       if (result.books) {
         console.log('Setting books state:', result.books.length, 'books')
@@ -63,6 +73,8 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
       }
     } catch (error) {
       console.error('Failed to load cookbooks:', error)
+      // Set loading to false even on error so UI doesn't hang
+      setIsLoading(false)
     } finally {
       console.log('loadBooks completed, setting isLoading to false')
       setIsLoading(false)

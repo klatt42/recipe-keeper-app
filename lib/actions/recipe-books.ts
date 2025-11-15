@@ -37,30 +37,42 @@ export async function getRecipeBooks() {
       return { books: [], error: ownedError.message }
     }
 
-    // Get books where user is a member
-    const { data: memberBooks, error: memberError } = await supabase
+    // Get book IDs where user is a member
+    const { data: membershipData, error: memberError } = await supabase
       .from('book_members')
-      .select('book_id, role, recipe_books(*)')
+      .select('book_id, role')
       .eq('user_id', user.id)
 
-    console.log('[getRecipeBooks] Member books:', memberBooks?.length || 0, 'Error:', memberError)
+    console.log('[getRecipeBooks] Memberships:', membershipData?.length || 0, 'Error:', memberError)
 
     if (memberError) {
       return { books: [], error: memberError.message }
     }
 
-    // Combine and deduplicate
-    const allBooks = [...(ownedBooks || [])]
-    const ownedBookIds = new Set(ownedBooks?.map(b => b.id) || [])
+    // Get the actual books for memberships
+    const memberBookIds = membershipData?.map(m => m.book_id).filter(id => !ownedBooks?.some(b => b.id === id)) || []
+    const membershipRoles = new Map(membershipData?.map(m => [m.book_id, m.role]) || [])
 
-    memberBooks?.forEach(mb => {
-      if (mb.recipe_books && !ownedBookIds.has(mb.book_id)) {
-        allBooks.push({
-          ...mb.recipe_books,
-          user_role: mb.role
-        })
-      }
-    })
+    let memberBooks: any[] = []
+    if (memberBookIds.length > 0) {
+      const { data: memberBooksData } = await supabase
+        .from('recipe_books')
+        .select('*')
+        .in('id', memberBookIds)
+
+      memberBooks = memberBooksData || []
+    }
+
+    console.log('[getRecipeBooks] Member books fetched:', memberBooks.length)
+
+    // Combine and deduplicate
+    const allBooks = [
+      ...(ownedBooks || []),
+      ...memberBooks.map(book => ({
+        ...book,
+        user_role: membershipRoles.get(book.id) || 'viewer'
+      }))
+    ]
 
     console.log('[getRecipeBooks] Total books before counts:', allBooks.length)
 
@@ -95,7 +107,23 @@ export async function getRecipeBooks() {
     )
 
     console.log('[getRecipeBooks] Returning books with counts:', booksWithCounts.length)
-    return { books: booksWithCounts as RecipeBook[], error: null }
+
+    // Serialize data to plain objects to avoid Next.js serialization issues
+    const plainBooks = booksWithCounts.map(book => ({
+      id: book.id,
+      name: book.name,
+      description: book.description || null,
+      owner_id: book.owner_id,
+      is_shared: Boolean(book.is_shared),
+      created_at: typeof book.created_at === 'string' ? book.created_at : new Date(book.created_at).toISOString(),
+      updated_at: typeof book.updated_at === 'string' ? book.updated_at : new Date(book.updated_at).toISOString(),
+      member_count: Number(book.member_count) || 0,
+      recipe_count: Number(book.recipe_count) || 0,
+      user_role: book.user_role || 'viewer'
+    }))
+
+    console.log('[getRecipeBooks] Serialized to plain objects')
+    return { books: plainBooks as RecipeBook[], error: null }
   } catch (error) {
     console.error('[getRecipeBooks] Unexpected error:', error)
     return { books: [], error: error instanceof Error ? error.message : 'Unknown error' }
