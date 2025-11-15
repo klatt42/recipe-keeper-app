@@ -54,8 +54,13 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     try {
       // TEST: Call simple test action first
       console.log('Testing simple server action...')
-      const testResult = await simpleTest()
-      console.log('Test result:', testResult)
+      try {
+        const testResult = await simpleTest()
+        console.log('Test result:', testResult)
+      } catch (testError) {
+        console.error('Simple test failed:', testError)
+        alert(`Server action test failed: ${testError instanceof Error ? testError.message : String(testError)}`)
+      }
 
       console.log('About to call getRecipeBooks, type:', typeof getRecipeBooks)
       console.log('Calling getRecipeBooks...')
