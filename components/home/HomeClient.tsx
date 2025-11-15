@@ -51,8 +51,9 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     console.log('loadBooks function called')
     setIsLoading(true)
     try {
-      console.log('Calling getRecipeBooks...')
-      const result = await getRecipeBooks()
+      console.log('Fetching cookbooks from API...')
+      const response = await fetch('/api/cookbooks')
+      const result = await response.json()
       console.log('Cookbooks loaded:', result)
 
       if (result.books) {
