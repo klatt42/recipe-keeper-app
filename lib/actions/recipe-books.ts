@@ -340,12 +340,6 @@ export async function inviteToBook(
     return { success: false, error: 'Unable to search for users' }
   }
 
-  const invitedUser = users?.find(u => u.email === email)
-
-  if (!invitedUser) {
-    return { success: false, error: `No user found with email "${email}". They need to sign up first at /signup.` }
-  }
-
   // Get the book details for the email
   const { data: book } = await supabase
     .from('recipe_books')
@@ -357,7 +351,43 @@ export async function inviteToBook(
     return { success: false, error: 'Cookbook not found' }
   }
 
-  // Add them as a member
+  const invitedUser = users?.find(u => u.email === email)
+
+  if (!invitedUser) {
+    // User doesn't exist yet - create a pending invitation
+    const { data: pendingInvite, error: pendingError } = await supabase
+      .from('pending_invitations')
+      .insert({
+        email,
+        book_id: bookId,
+        invited_by: user.id,
+        role,
+      })
+      .select('invitation_token')
+      .single()
+
+    if (pendingError) {
+      if (pendingError.code === '23505') {
+        return { success: false, error: 'This email has already been invited to this cookbook' }
+      }
+      return { success: false, error: pendingError.message }
+    }
+
+    // Send invitation email with signup link
+    await sendCookbookInvitation({
+      toEmail: email,
+      inviterName: user.user_metadata?.full_name || user.email || 'Someone',
+      cookbookId: bookId,
+      cookbookName: book.name,
+      role,
+      invitationToken: pendingInvite.invitation_token,
+    })
+
+    revalidatePath('/')
+    return { success: true, error: null, isPending: true }
+  }
+
+  // User exists - add them directly as a member
   const { error } = await supabase
     .from('book_members')
     .insert({
@@ -369,12 +399,12 @@ export async function inviteToBook(
 
   if (error) {
     if (error.code === '23505') {
-      return { success: false, error: 'User is already a member of this book' }
+      return { success: false, error: 'User is already a member of this cookbook' }
     }
     return { success: false, error: error.message }
   }
 
-  // Send invitation email (don't fail if email fails)
+  // Send notification email (no signup needed)
   await sendCookbookInvitation({
     toEmail: email,
     inviterName: user.user_metadata?.full_name || user.email || 'Someone',
@@ -384,7 +414,7 @@ export async function inviteToBook(
   })
 
   revalidatePath('/')
-  return { success: true, error: null }
+  return { success: true, error: null, isPending: false }
 }
 
 /**

@@ -10,6 +10,7 @@ interface SendCookbookInvitationParams {
   cookbookName: string
   cookbookId: string
   role: 'editor' | 'viewer'
+  invitationToken?: string
 }
 
 export async function sendCookbookInvitation({
@@ -18,6 +19,7 @@ export async function sendCookbookInvitation({
   cookbookName,
   cookbookId,
   role,
+  invitationToken,
 }: SendCookbookInvitationParams) {
   // Check if email is enabled
   if (!isEmailEnabled()) {
@@ -31,7 +33,10 @@ export async function sendCookbookInvitation({
 
   try {
     // Generate invitation accept URL
-    const acceptUrl = `${APP_URL}/cookbooks/${cookbookId}/accept`
+    // If there's an invitation token, user needs to signup first
+    const acceptUrl = invitationToken
+      ? `${APP_URL}/signup?invitation=${invitationToken}`
+      : `${APP_URL}/cookbooks/${cookbookId}/accept`
 
     // Send email using Resend
     const { data, error } = await resend.emails.send({
