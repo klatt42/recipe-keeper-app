@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
+      allowedOrigins: ['recipe-keeper-app-five.vercel.app', 'localhost:3000'],
     },
   },
   eslint: {
@@ -17,8 +18,6 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  // Disable static page generation to avoid useSearchParams errors
-  output: 'standalone',
 };
 
 // Sentry configuration
