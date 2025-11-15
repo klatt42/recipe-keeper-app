@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { TooltipToggle } from '@/components/ui/TooltipToggle'
 import { PromoUsageBanner } from '@/components/promo/PromoUsageBanner'
 import { getRecipeBooks, getRecipeBook } from '@/lib/actions/recipe-books'
+import { simpleTest } from '@/lib/actions/test-action'
 import type { Recipe } from '@/lib/schemas/recipe'
 import type { RecipeBook, BookWithMembers } from '@/lib/types/recipe-books'
 
@@ -51,17 +52,35 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     console.log('loadBooks function called')
     setIsLoading(true)
     try {
+      // TEST: Call simple test action first
+      console.log('Testing simple server action...')
+      const testResult = await simpleTest()
+      console.log('Test result:', testResult)
+
+      console.log('About to call getRecipeBooks, type:', typeof getRecipeBooks)
       console.log('Calling getRecipeBooks...')
 
-      // Add timeout to detect hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout after 5 seconds')), 5000)
-      )
+      let result
+      try {
+        // Add timeout to detect hanging
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout after 5 seconds')), 5000)
+        )
 
-      const result = await Promise.race([
-        getRecipeBooks(),
-        timeoutPromise
-      ]) as Awaited<ReturnType<typeof getRecipeBooks>>
+        result = await Promise.race([
+          getRecipeBooks(),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof getRecipeBooks>>
+
+        console.log('Got result from getRecipeBooks:', result)
+      } catch (callError) {
+        console.error('Exception when calling getRecipeBooks:', callError)
+        if (callError instanceof Error) {
+          console.error('Error message:', callError.message)
+          console.error('Error stack:', callError.stack)
+        }
+        throw callError
+      }
 
       console.log('Cookbooks loaded:', result)
       if (result.books) {
@@ -72,7 +91,10 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
         console.error('Error loading cookbooks:', result.error)
       }
     } catch (error) {
-      console.error('Failed to load cookbooks:', error)
+      console.error('Failed to load cookbooks (outer catch):', error)
+      if (error instanceof Error) {
+        console.error('Outer error message:', error.message)
+      }
       // Set loading to false even on error so UI doesn't hang
       setIsLoading(false)
     } finally {

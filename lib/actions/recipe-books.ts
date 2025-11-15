@@ -7,10 +7,22 @@ import type { RecipeBook, BookMember, BookRole } from '@/lib/types/recipe-books'
 import { sendCookbookInvitation } from '@/lib/email/send-cookbook-invitation'
 import { invitationLimit, checkRateLimit } from '@/lib/ratelimit'
 
+console.log('[recipe-books.ts] Module loaded successfully')
+
+/**
+ * Simple test function to verify server actions work
+ */
+export async function testServerAction() {
+  console.log('[testServerAction] Called!')
+  return { success: true, message: 'Server action works!' }
+}
+
 /**
  * Get all recipe books accessible to the current user
  */
 export async function getRecipeBooks() {
+  console.log('[getRecipeBooks] FUNCTION CALLED - START OF EXECUTION')
+
   try {
     const supabase = await createClient()
     const {
