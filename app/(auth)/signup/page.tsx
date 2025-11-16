@@ -33,7 +33,8 @@ function SignupForm() {
       setInvitationToken(token)
       setLoadingInvitation(true)
 
-      fetch(`/api/invitations/${token}`)
+      // Use query parameter endpoint instead of dynamic route to avoid Next.js 15 issues
+      fetch(`/api/invitations/details?token=${encodeURIComponent(token)}`)
         .then(async (response) => {
           const result = await response.json()
           if (result.success && result.invitation) {
