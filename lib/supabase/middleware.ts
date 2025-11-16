@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Force rebuild: 2025-01-16
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
