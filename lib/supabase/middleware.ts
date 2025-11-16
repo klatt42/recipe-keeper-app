@@ -36,6 +36,53 @@ export async function updateSession(request: NextRequest) {
 
   // Log user activity for authenticated users
   if (user) {
+    // Create service role client for background tasks
+    const serviceSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll() {
+            // No need to set cookies for service role
+          },
+        },
+      }
+    )
+
+    // Check for pending invitations and accept them automatically
+    // This ensures invitations are accepted regardless of how the user logs in
+    serviceSupabase
+      .from('pending_invitations')
+      .select('*')
+      .eq('email', user.email)
+      .is('accepted_at', null)
+      .then(({ data: pendingInvitations }) => {
+        if (pendingInvitations && pendingInvitations.length > 0) {
+          // Accept all pending invitations
+          pendingInvitations.forEach(async (invitation) => {
+            // Add user to the cookbook
+            await serviceSupabase.from('book_members').insert({
+              book_id: invitation.book_id,
+              user_id: user.id,
+              role: invitation.role,
+              invited_by: invitation.invited_by,
+            })
+
+            // Mark invitation as accepted
+            await serviceSupabase
+              .from('pending_invitations')
+              .update({ accepted_at: new Date().toISOString() })
+              .eq('id', invitation.id)
+          })
+        }
+      })
+      .catch(() => {
+        // Silently fail if invitation processing fails
+      })
+
     // Only log activity for page views (not API calls or static assets)
     const isPageView =
       !request.nextUrl.pathname.startsWith('/api/') &&
@@ -48,23 +95,6 @@ export async function updateSession(request: NextRequest) {
       if (request.nextUrl.pathname.startsWith('/recipes/') && request.nextUrl.pathname.length > 10) {
         activityType = 'recipe_view'
       }
-
-      // Log activity asynchronously (don't block the response)
-      // Using service role client for the activity log
-      const serviceSupabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return request.cookies.getAll()
-            },
-            setAll() {
-              // No need to set cookies for service role
-            },
-          },
-        }
-      )
 
       // Fire and forget - don't await to avoid blocking
       try {
