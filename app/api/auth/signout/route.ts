@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
+async function handleSignOut(request: Request) {
   const supabase = await createClient()
 
   // Sign out the user
@@ -10,4 +10,12 @@ export async function POST(request: Request) {
   // Redirect to login page
   const origin = new URL(request.url).origin
   return NextResponse.redirect(`${origin}/login`)
+}
+
+export async function POST(request: Request) {
+  return handleSignOut(request)
+}
+
+export async function GET(request: Request) {
+  return handleSignOut(request)
 }

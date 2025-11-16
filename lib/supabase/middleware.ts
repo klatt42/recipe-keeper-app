@@ -54,34 +54,40 @@ export async function updateSession(request: NextRequest) {
 
     // Check for pending invitations and accept them automatically
     // This ensures invitations are accepted regardless of how the user logs in
-    serviceSupabase
-      .from('pending_invitations')
-      .select('*')
-      .eq('email', user.email)
-      .is('accepted_at', null)
-      .then(({ data: pendingInvitations }) => {
-        if (pendingInvitations && pendingInvitations.length > 0) {
-          // Accept all pending invitations
-          pendingInvitations.forEach(async (invitation) => {
-            // Add user to the cookbook
-            await serviceSupabase.from('book_members').insert({
-              book_id: invitation.book_id,
-              user_id: user.id,
-              role: invitation.role,
-              invited_by: invitation.invited_by,
-            })
+    if (user.email) {
+      serviceSupabase
+        .from('pending_invitations')
+        .select('*')
+        .eq('email', user.email)
+        .is('accepted_at', null)
+        .then(async ({ data: pendingInvitations }) => {
+          if (pendingInvitations && pendingInvitations.length > 0) {
+            // Accept all pending invitations sequentially
+            for (const invitation of pendingInvitations) {
+              try {
+                // Add user to the cookbook
+                await serviceSupabase.from('book_members').insert({
+                  book_id: invitation.book_id,
+                  user_id: user.id,
+                  role: invitation.role,
+                  invited_by: invitation.invited_by,
+                })
 
-            // Mark invitation as accepted
-            await serviceSupabase
-              .from('pending_invitations')
-              .update({ accepted_at: new Date().toISOString() })
-              .eq('id', invitation.id)
-          })
-        }
-      })
-      .catch(() => {
-        // Silently fail if invitation processing fails
-      })
+                // Mark invitation as accepted
+                await serviceSupabase
+                  .from('pending_invitations')
+                  .update({ accepted_at: new Date().toISOString() })
+                  .eq('id', invitation.id)
+              } catch (error) {
+                console.error('Error accepting invitation:', error)
+              }
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('Error checking pending invitations:', error)
+        })
+    }
 
     // Only log activity for page views (not API calls or static assets)
     const isPageView =
