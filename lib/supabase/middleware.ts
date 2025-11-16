@@ -124,6 +124,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/api/auth') ||
     request.nextUrl.pathname.startsWith('/api/invitations') ||
     request.nextUrl.pathname.startsWith('/api/webhooks') ||
+    request.nextUrl.pathname.startsWith('/api/debug') ||
     request.nextUrl.pathname.startsWith('/share')
 
   if (!user && !isPublicPath) {
