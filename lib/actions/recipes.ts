@@ -376,11 +376,13 @@ export async function getRecipesFromCookbook(bookId: string | null) {
   let query = supabase
     .from('recipes')
     .select('*')
-    .eq('user_id', user.id)
 
   if (bookId === null) {
-    query = query.is('book_id', null)
+    // For "no cookbook", only show user's own recipes
+    query = query.is('book_id', null).eq('user_id', user.id)
   } else {
+    // For specific cookbook, let RLS handle access control
+    // This allows viewing recipes in shared cookbooks
     query = query.eq('book_id', bookId)
   }
 
