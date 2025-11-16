@@ -102,6 +102,20 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
     setIsCreateModalOpen(false)
   }
 
+  const handleSignOut = async () => {
+    try {
+      const response = await fetch('/api/auth/signout', { method: 'POST' })
+      if (response.redirected) {
+        window.location.href = response.url
+      } else {
+        window.location.href = '/login'
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      window.location.href = '/login'
+    }
+  }
+
   // Filter recipes by selected cookbook
   const filteredRecipes = selectedBookId
     ? recipes.filter((recipe) => recipe.book_id === selectedBookId)
@@ -165,15 +179,13 @@ export function HomeClient({ initialRecipes, userEmail, userId, promoResult, isA
                 </svg>
                 <span className="hidden sm:inline">{userEmail}</span>
               </Link>
-              <form action="/api/auth/signout" method="POST">
-                <button
-                  type="submit"
-                  className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white shadow-lg transition-all border border-white/30 hover:scale-105"
-                  title="Sign out of your account"
-                >
-                  🚪 Sign out
-                </button>
-              </form>
+              <button
+                onClick={handleSignOut}
+                className="rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-bold text-white shadow-lg transition-all border border-white/30 hover:scale-105"
+                title="Sign out of your account"
+              >
+                🚪 Sign out
+              </button>
             </div>
           </div>
         </div>
