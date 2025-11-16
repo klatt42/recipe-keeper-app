@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function POST() {
+async function acceptInvitations() {
   try {
     const supabase = await createClient()
 
@@ -115,4 +115,12 @@ export async function POST() {
       error: error instanceof Error ? error.message : 'Unknown error',
     })
   }
+}
+
+export async function POST() {
+  return acceptInvitations()
+}
+
+export async function GET() {
+  return acceptInvitations()
 }
